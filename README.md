@@ -77,4 +77,32 @@ Selectionkey keys = Selector.selectedkeys();
 #### AIO实例
 实现服务器监听客户端，并且接收客户端发过来的数据
 
+#### NIO实例
+实现客户端和服务端的通信
 
+## 使用方法
+### UDP
+**在Send data前需要设定target**
+```
+javac Server.java
+javac Client.java
+
+java Client
+java Server
+```
+### TCP
+```
+javac GreetingServer.java
+javac GreetingClient.java
+
+java GreetingServer
+java GreetingClient
+```
+### AIO
+```
+javac AIOServer.java
+javac AIOClient.java
+
+java AIOServer
+java AIOClient
+```
