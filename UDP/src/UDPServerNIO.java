@@ -1,26 +1,25 @@
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.util.Iterator;
 import java.text.SimpleDateFormat;
+import java.util.Iterator;
 
 public class UDPServerNIO {
 
-    String rawData, processedData;
+    String rawData;
     int num_len = 4;
     String localAddress, decimalTargetAddress, hexTargetAddress;
     int localPort, decimalTargetPort, hexTargetPort;
 
-//    machine name and port
+    // machine name and port
     String machineName = "";
     int machinePort = 0;
 
-//    init
+    // init
     public UDPServerNIO (String address, int port) {
         this.localPort = port;
         this.localAddress = address;
@@ -37,22 +36,21 @@ public class UDPServerNIO {
     }
 
     public String tempDecimal (String tempData, int num_len) {
-        String processedDecimal = "";
+        StringBuilder processedDecimal = new StringBuilder();
         for(int x = 0; x < tempData.length() / num_len; x++) {
             String hex = tempData.substring(num_len * x, num_len * (x + 1));
-            int value = 0;
+            int value;
 
-            //  即符号位为1
             if (Integer.parseInt(hex.substring(0, 1), 16) >= 8) {
                 value = Integer.parseInt(hex,16) - Integer.parseInt("10000",16);
             } else {
                 value = Integer.parseInt(hex,16);
             }
 
-            processedDecimal = processedDecimal + String.format("%.1f  ", value * 0.1);
+            processedDecimal.append(String.format("%.1f  ", value * 0.1));
         }
 
-        return processedDecimal;
+        return processedDecimal.toString();
     }
 
     public void setDecimalTarget(String address, int port) {
@@ -65,7 +63,7 @@ public class UDPServerNIO {
         this.hexTargetPort = port;
     }
 
-//    forward data module
+    // forward data module
     public void receive() throws IOException {
         final DatagramChannel channel = DatagramChannel.open();
         channel.configureBlocking(false);
@@ -74,6 +72,8 @@ public class UDPServerNIO {
 
         final Selector selector = Selector.open();
         channel.register(selector, SelectionKey.OP_READ);
+
+        long num = 0;
 
         // query for IO event by selector
         while (selector.select() > 0) {
@@ -85,7 +85,7 @@ public class UDPServerNIO {
                 // isReadable event
                 if (selectionKey.isReadable()) {
                     final SocketAddress client = channel.receive(receiveBuffer);
-
+                    System.out.println(++num);
                     receiveBuffer.flip();
                     rawData = new String(receiveBuffer.array());
 
@@ -93,8 +93,8 @@ public class UDPServerNIO {
                     String strsystime = sf.format(System.currentTimeMillis());
                     System.out.println(strsystime + " received data: " + rawData);
 
-//                    isCommand
-                    if(rawData.indexOf("#") == -1) {
+                    // is Command
+                    if(!rawData.contains("#")) {
 //                        sendBuffer.put(getHexBytes(rawData));
 //                        sendBuffer.flip();
 //                        channel.send(sendBuffer, new InetSocketAddress("192.168.2.119", 12000));
@@ -102,19 +102,18 @@ public class UDPServerNIO {
                         System.out.println(rawData);
                         continue;
                     } else if (rawData.split("[#]")[1].trim().length() != num_len * 8) {
-//                        is Command return
+                        // is Command return
                         System.out.println(rawData);
-
                         continue;
                     }
 
-//                    send to 12000
+                    // send hex message
                     sendBuffer.put(rawData.getBytes());
                     sendBuffer.flip();
                     channel.send(sendBuffer, new InetSocketAddress(this.hexTargetAddress, this.hexTargetPort));
                     sendBuffer.clear();
 
-//                    send to 13000
+                    // send decimal message
                     String ICCID = rawData.split("[#]")[0].trim();
                     String tempData = rawData.split("[#]")[1].trim();
 
@@ -123,6 +122,7 @@ public class UDPServerNIO {
                     channel.send(sendBuffer, new InetSocketAddress(this.decimalTargetAddress, this.decimalTargetPort));
                     sendBuffer.clear();
 
+                    // record lately client
                     machineName = client.toString().split("[:]")[0].trim().substring(1);
                     machinePort = Integer.parseInt(client.toString().split("[:]")[1].trim());
                 }
