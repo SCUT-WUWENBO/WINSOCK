@@ -1,3 +1,5 @@
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -5,8 +7,17 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Iterator;
+import java.io.File;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.FileNotFoundException;
+import java.util.*;
 
 public class UDPServerNIO {
 
@@ -18,6 +29,10 @@ public class UDPServerNIO {
     // machine name and port
     String machineName = "";
     int machinePort = 0;
+
+    // deviceID Map
+    Map<String, String> deviceID = new HashMap<String, String>();
+    int deviceNum = 0;
 
     // init
     public UDPServerNIO (String address, int port) {
@@ -61,6 +76,44 @@ public class UDPServerNIO {
     public void setHexTarget(String address, int port) {
         this.hexTargetAddress = address;
         this.hexTargetPort = port;
+    }
+
+    //  write data into csv file
+    public static void writeCsv(String savePath, String fileName, String time, String[] content) throws IOException {
+        String filePath = savePath + "/" + fileName + ".csv";
+
+        // create csv object
+        File csvFile = new File(filePath);
+
+        // if not exist dir, then create
+        if (!csvFile.getParentFile().exists()) {
+            csvFile.getParentFile().mkdirs();
+        }
+        // if not exist file, then create
+        if (!csvFile.exists()) {
+            csvFile.createNewFile();
+        }
+
+        try {
+            // create writer object
+            BufferedWriter writer = new BufferedWriter(new FileWriter(csvFile, true));
+
+            // write data in csv
+            String str = time;
+            for(int i = 0; i < content.length; i++) {
+                if(i != 0) {
+                    str = str + ",";
+                }
+                str = str + content[i];
+            }
+            writer.write(str);
+            writer.newLine();
+            writer.close();
+        } catch (FileNotFoundException ex) {
+            System.out.println("Not find csv file");
+        } catch (IOException ex) {
+            System.out.println("IO error");
+        }
     }
 
     // forward data module
@@ -107,19 +160,25 @@ public class UDPServerNIO {
                         continue;
                     }
 
-                    // send hex message
-                    sendBuffer.put(rawData.getBytes());
-                    sendBuffer.flip();
-                    channel.send(sendBuffer, new InetSocketAddress(this.hexTargetAddress, this.hexTargetPort));
-                    sendBuffer.clear();
-
-                    // send decimal message
                     String ICCID = rawData.split("[#]")[0].trim();
                     String tempData = rawData.split("[#]")[1].trim();
 
-                    sendBuffer.put((ICCID + "# " +tempDecimal(tempData, num_len)).getBytes());
+                    // if first receive data from the device
+                    if(!deviceID.containsKey(ICCID)) {
+                        deviceID.put(ICCID, String.valueOf(++deviceNum));
+                    }
+
+                    // send hex message
+                    sendBuffer.put(rawData.getBytes());
                     sendBuffer.flip();
-                    channel.send(sendBuffer, new InetSocketAddress(this.decimalTargetAddress, this.decimalTargetPort));
+                    channel.send(sendBuffer, new InetSocketAddress(this.hexTargetAddress, this.hexTargetPort + Integer.parseInt(deviceID.get(ICCID))));
+                    sendBuffer.clear();
+
+                    // send decimal message
+                    writeCsv("./data", ICCID, strsystime, tempDecimal(tempData, num_len).split("\\s+"));
+                    sendBuffer.put((ICCID + "# " + tempDecimal(tempData, num_len)).getBytes());
+                    sendBuffer.flip();
+                    channel.send(sendBuffer, new InetSocketAddress(this.decimalTargetAddress, this.decimalTargetPort + Integer.parseInt(deviceID.get(ICCID))));
                     sendBuffer.clear();
 
                     // record lately client
@@ -134,9 +193,9 @@ public class UDPServerNIO {
     }
 
     public static void main(String[] args) throws IOException {
-        UDPServerNIO server = new UDPServerNIO("192.168.2.119", 10000);
-        server.setDecimalTarget("192.168.2.119", 12000);
-        server.setHexTarget("192.168.2.119", 13000);
+        UDPServerNIO server = new UDPServerNIO("192.168.2.157", 10000);
+        server.setDecimalTarget("192.168.2.157", 30000);
+        server.setHexTarget("192.168.2.157", 20000);
         server.receive();
     }
 }
