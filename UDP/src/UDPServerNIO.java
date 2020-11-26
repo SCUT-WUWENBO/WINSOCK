@@ -99,13 +99,11 @@ public class UDPServerNIO {
             BufferedWriter writer = new BufferedWriter(new FileWriter(csvFile, true));
 
             // write data in csv
-            String str = time;
+            String str = "";
             for(int i = 0; i < content.length; i++) {
-                if(i != 0) {
-                    str = str + ",";
-                }
-                str = str + content[i];
+                str = str + content[i] + ",";
             }
+            str += time;
             writer.write(str);
             writer.newLine();
             writer.close();
