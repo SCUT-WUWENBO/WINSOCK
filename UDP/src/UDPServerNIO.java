@@ -1,8 +1,9 @@
 import org.omg.Messaging.SYNC_WITH_TRANSPORT;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
@@ -11,12 +12,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Iterator;
-import java.io.File;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.FileNotFoundException;
 import java.util.*;
 
 public class UDPServerNIO {
@@ -136,13 +131,18 @@ public class UDPServerNIO {
                 // isReadable event
                 if (selectionKey.isReadable()) {
                     final SocketAddress client = channel.receive(receiveBuffer);
-                    System.out.println(++num);
+//                    System.out.println(++num);
                     receiveBuffer.flip();
                     rawData = new String(receiveBuffer.array());
 
                     SimpleDateFormat sf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                     String strsystime = sf.format(System.currentTimeMillis());
                     System.out.println(strsystime + " received data: " + rawData);
+
+                    // Save raw data in txt file
+                    FileWriter fw = new FileWriter("./data/raw.txt", true);
+                    fw.write(strsystime + " received data: " + rawData + "\r");
+                    fw.close();
 
                     // is Command
                     if(!rawData.contains("#")) {
@@ -191,7 +191,7 @@ public class UDPServerNIO {
     }
 
     public static void main(String[] args) throws IOException {
-        UDPServerNIO server = new UDPServerNIO("192.168.2.157", 10000);
+        UDPServerNIO server = new UDPServerNIO("192.168.2.111", 10000);
         server.setDecimalTarget("192.168.2.157", 30000);
         server.setHexTarget("192.168.2.157", 20000);
         server.receive();
