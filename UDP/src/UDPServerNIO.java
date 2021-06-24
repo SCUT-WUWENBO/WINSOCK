@@ -1,5 +1,3 @@
-import org.omg.Messaging.SYNC_WITH_TRANSPORT;
-
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -191,7 +189,7 @@ public class UDPServerNIO {
     }
 
     public static void main(String[] args) throws IOException {
-        UDPServerNIO server = new UDPServerNIO("192.168.2.111", 10000);
+        UDPServerNIO server = new UDPServerNIO("192.168.2.136", 10000);
         server.setDecimalTarget("192.168.2.157", 30000);
         server.setHexTarget("192.168.2.157", 20000);
         server.receive();
